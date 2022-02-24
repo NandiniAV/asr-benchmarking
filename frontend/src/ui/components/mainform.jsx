@@ -252,7 +252,8 @@ class Mainform extends Component {
     });
     if (fetchObj.ok) {
       const result = await fetchObj.json();
-      this.setState({ loading: true, cer: result.cer_score });
+      this.setState({ loading: false, cer: result.cer_score });
+      this.setState({ dialogMessage: 'Please provide your feedback' })
       this.submitForm();
     }
   }
@@ -279,7 +280,6 @@ class Mainform extends Component {
         const resData = await res.json();
         console.log('resdata', resData);
         this.setState({ loading: false });
-        this.setState({ dialogMessage: 'Please provide your feedback' })
       })
       .catch((error) => {
         console.log("error", error);

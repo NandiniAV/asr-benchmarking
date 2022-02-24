@@ -221,7 +221,7 @@ class Mainform extends Component {
       .then(async (res) => {
         const resData = await res.json();
         console.log('resData', resData)
-        this.submitForm();
+        this.clearState();
       })
       .catch((error) => {
         console.log("error", error);
@@ -238,7 +238,7 @@ class Mainform extends Component {
     });
     if (fetchObj.ok) {
       const result = await fetchObj.json();
-      this.setState({ loading: false, wer: result.wer_score });
+      this.setState({ loading: true, wer: result.wer_score });
       this.getCerScrore()
     }
   }
@@ -252,7 +252,8 @@ class Mainform extends Component {
     });
     if (fetchObj.ok) {
       const result = await fetchObj.json();
-      this.setState({ loading: false, cer: result.cer_score });
+      this.setState({ loading: true, cer: result.cer_score });
+      this.submitForm();
     }
   }
 
@@ -278,7 +279,7 @@ class Mainform extends Component {
         const resData = await res.json();
         console.log('resdata', resData);
         this.setState({ loading: false });
-        this.clearState();
+        this.setState({ dialogMessage: 'Please provide your feedback' })
       })
       .catch((error) => {
         console.log("error", error);
@@ -316,8 +317,7 @@ class Mainform extends Component {
         var secs = result.prediction_time ? result.prediction_time.split(':')[2] : fsecs;
       }
       const nsecs =  Math.round(secs * 100) / 100
-      this.setState({ predictedTime: nsecs, predictedText: result.transcript, loading: false, show: true });
-      this.setState({ dialogMessage: 'Please provide your feedback' })
+      this.setState({ predictedTime: nsecs, predictedText: result.transcript, loading: true, show: true });
       this.getWerScrore()
     }
   };

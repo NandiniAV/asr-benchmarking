@@ -78,6 +78,7 @@ class Mainform extends Component {
       showRT: false,
       start: false,
       stopRT: false,
+      disableNC: false,
   };
     // If you want to bind it with the object then add following lines
     this.handleStart = this.handleStart.bind(this);
@@ -265,8 +266,13 @@ class Mainform extends Component {
     });
     if (fetchObj.ok) {
       const result = await fetchObj.json();
-      this.setState({ loading: true, wer: result.wer_score });
-      this.getCerScrore()
+      if(this.state.showRT && this.state.startRT) {
+        this.setState({ wer: result.wer_score });
+        this.getCerScrore()
+      } else {
+        this.setState({ loading: true, wer: result.wer_score });
+        this.getCerScrore()
+      }
     }
   }
 
@@ -279,9 +285,15 @@ class Mainform extends Component {
     });
     if (fetchObj.ok) {
       const result = await fetchObj.json();
-      this.setState({ loading: false, cer: result.cer_score });
-      this.setState({ dialogMessage: 'Please provide your feedback' })
-      this.submitForm();
+      if(this.state.showRT && this.state.startRT) {
+        this.setState({ cer: result.cer_score });
+        this.setState({ dialogMessage: 'Please provide your feedback' })
+        this.submitForm();
+      } else {
+        this.setState({ loading: false, cer: result.cer_score });
+        this.setState({ dialogMessage: 'Please provide your feedback' })
+        this.submitForm();
+      }
     }
   }
 
@@ -396,15 +408,22 @@ class Mainform extends Component {
   setText(text) {
     this.setState({text: text});
   }
-  setStatus(text) {
+
+  setStatus(text, val) {
     if(text) {
+      console.log('1')
       this.setState({ startRT: false, stopRT: true, predictedText: text,  show: true })
-    } else {
+    } if(val === 'start') {
+      console.log('2')
       this.setState({ startRT: false, stopRT: true })
+    // } else {
+    //   console.log('3')
+    //   this.setState({ startRT: true, stopRT: false })
     }
   }
 
   handleStart() {
+    this.setState({disableNC: true})
     const streaming = this.state.streaming;
     const language = this.state.lang;
     this.setText('Connecting to server..');
@@ -413,12 +432,13 @@ class Mainform extends Component {
         console.log("Connected", id, 'action:', action);
         if (action === SocketStatus.CONNECTED) {
             console.log('Starting.....');
+            _this.setStatus('', 'start');
             _this.setText('Connected, Start Speaking..');
             streaming.startStreaming(function (transcript) {
                 console.log("Data", transcript);
                 // _this.setText(transcript);
-                
-                this.intervalId = setInterval(this.timer.bind(this), 1000);
+                // this.intervalId = setInterval(this.timer.bind(this), 1000);
+                _this.setText('Transcribing..');
                 _this.setStatus(transcript);
             }, (e) => {
                 console.log("I got error", e);
@@ -426,7 +446,7 @@ class Mainform extends Component {
         } else if (action === SocketStatus.TERMINATED) {
             // Socket is closed and punctuation can be done here.
             console.log("Punctuating: ", _this.state.text);
-            _this.setStatus();
+            // _this.setStatus();
             // _this.handlePunctuation(_this.state.text);
         } else {
             console.log("Un expected action", action, id)
@@ -438,7 +458,9 @@ class Mainform extends Component {
     console.log('Stopping: ' + this.state.text);
     this.state.streaming.stopStreaming();
     this.setState({ startRT: true, stopRT: false, showRT: true });
-    this.getWerScrore();
+    if (this.state.predictedText) {
+      this.getWerScrore()
+    }
     clearInterval(this.intervalId);
   }
 
@@ -508,8 +530,8 @@ class Mainform extends Component {
                             style={{ fontFamily: 'Arial', fontSize: '1.5rem', lineHeight: '1.4'}}  value={this.state.setSentence}  disabled  />
                         </Grid>
                         <Grid  style={{ marginTop: "4%", marginBottom: "1%", display: "flex", flexDirection: "column", alignItems: 'center' }} >
-                            <Grid style={{width: '100%', textAlign: 'center'}}>
-                                <Grid style={this.state.startR ? {pointerEvents: "none", opacity: "0.4", display: 'inline-block', marginRight: '4%'}
+                            <Grid style={{ width: '100%', textAlign: 'center'}}>
+                                <Grid style={this.state.disableNC ? {pointerEvents: "none", opacity: "0.4", display: 'inline-block', marginRight: '4%'}
                                  : {display: 'inline-block', marginRight: '4%'}}>
                                   {this.state.micOn && (
                                     <Tooltip id="tooltip-fab" title="Record Audio">
@@ -523,7 +545,7 @@ class Mainform extends Component {
                                   // />
                                   )}
                                 </Grid>
-                                <Grid style={!this.state.showRT ? {pointerEvents: "none", opacity: "0.4", display: 'inline-block', marginRight: '4%'} 
+                                <Grid style={this.state.showRT && this.state.predictedText ? {pointerEvents: "none", opacity: "0.4", display: 'inline-block', marginRight: '4%'} 
                                 : { display: 'inline-block', marginRight: '4%'}}>
                                   {this.state.showRT && this.state.startRT &&  (
                                     <Tooltip id="tooltip-fab" title="Realtime Conversion">

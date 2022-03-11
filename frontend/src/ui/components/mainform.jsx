@@ -117,6 +117,10 @@ class Mainform extends Component {
         show: false,
         loading: false,
         currentCount: 20,
+        showRT: false,
+        startRT: false,
+        stopRT: false,
+        disableNC: false,
       },
       () => {
         this.getModel(this.state.lang, "model");
@@ -144,7 +148,7 @@ class Mainform extends Component {
     if(this.state.setModel === 'vakyansh') {
       this.setState({ showRT: true, startRT: true });
     } else {
-      this.setState({ showRT: false, startRT: false });
+      this.setState({ showRT: false, startRT: false, disableNC: false });
     }
     this.getModel(event.target.value, "model");
     this.getSentence(event.target.value);
@@ -162,7 +166,7 @@ class Mainform extends Component {
         if(item.model_name === 'vakyansh') {
           this.setState({ showRT: true, startRT: true });
         } else {
-          this.setState({ showRT: false, startRT: false });
+          this.setState({ showRT: false, startRT: false, disableNC: false });
         }
       }
     });
@@ -188,11 +192,12 @@ class Mainform extends Component {
             this.setState({ loading: false});
           } else {
             this.setState({ modelID: this.models[0].model_id, setModel: this.models[0].model_name, loading: false});
-            if(this.models[0].model_name === 'vakyansh') {
-              this.setState({ showRT: true, startRT: true });
-            } else {
-              this.setState({ showRT: false, startRT: false });
-            }
+          }
+
+          if(this.state.setModel === 'vakyansh') {
+            this.setState({ showRT: true, startRT: true });
+          } else {
+            this.setState({ showRT: false, startRT: false, disableNC: false });
           }
         } else {
           this.setState({
@@ -411,10 +416,8 @@ class Mainform extends Component {
 
   setStatus(text, val) {
     if(text) {
-      console.log('1')
       this.setState({ startRT: false, stopRT: true, predictedText: text,  show: true })
     } if(val === 'start') {
-      console.log('2')
       this.setState({ startRT: false, stopRT: true })
     // } else {
     //   console.log('3')
@@ -458,6 +461,7 @@ class Mainform extends Component {
     console.log('Stopping: ' + this.state.text);
     this.state.streaming.stopStreaming();
     this.setState({ startRT: true, stopRT: false, showRT: true });
+    this.setText('');
     if (this.state.predictedText) {
       this.getWerScrore()
     }
@@ -531,7 +535,7 @@ class Mainform extends Component {
                         </Grid>
                         <Grid  style={{ marginTop: "4%", marginBottom: "1%", display: "flex", flexDirection: "column", alignItems: 'center' }} >
                             <Grid style={{ width: '100%', textAlign: 'center'}}>
-                                <Grid style={this.state.disableNC ? {pointerEvents: "none", opacity: "0.4", display: 'inline-block', marginRight: '4%'}
+                                <Grid style={this.state.disableNC ? {display: 'none'}
                                  : {display: 'inline-block', marginRight: '4%'}}>
                                   {this.state.micOn && (
                                     <Tooltip id="tooltip-fab" title="Record Audio">
@@ -545,8 +549,8 @@ class Mainform extends Component {
                                   // />
                                   )}
                                 </Grid>
-                                <Grid style={this.state.showRT && this.state.predictedText ? {pointerEvents: "none", opacity: "0.4", display: 'inline-block', marginRight: '4%'} 
-                                : { display: 'inline-block', marginRight: '4%'}}>
+                                <Grid style={this.state.disableNC ? {pointerEvents: "none", opacity: "0.4", display: 'inline-block'}
+                                 :{ display: 'inline-block'}}>
                                   {this.state.showRT && this.state.startRT &&  (
                                     <Tooltip id="tooltip-fab" title="Realtime Conversion">
                                     <IconButton aria-label="Realtime Conversion" onClick={this.handleStart} 
@@ -555,6 +559,8 @@ class Mainform extends Component {
                                     </IconButton>
                                     </Tooltip>
                                   )}
+                                  </Grid>
+                                  <Grid style={{ display: 'inline-block'}}>
                                   {this.state.showRT && this.state.stopRT && (
                                     <IconButton aria-label="Stop RT Audio" onClick={this.handleStop} 
                                     style={{ background: '#F44336', color: '#ffffff'}}> 
@@ -570,7 +576,7 @@ class Mainform extends Component {
                                 style={{ display: "none" }}
                                 />
                             </Grid>
-                            <Grid style={{ marginBottom: "2%", width: '100%'}}>
+                            <Grid style={{ marginBottom: "2%", width: '100%', textAlign: 'center'}}>
                                 {!this.state.micOn && (
                                 <IconButton aria-label="Stop Audio" onClick={this.onStopClick} 
                                   style={{ background: '#F44336', color: '#ffffff', marginRight: '4%'}}> 

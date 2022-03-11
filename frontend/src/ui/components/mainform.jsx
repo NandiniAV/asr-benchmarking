@@ -5,7 +5,7 @@ import Box from "@material-ui/core/Box";
 import TextField from "@material-ui/core/TextField";
 import MenuItem from "@material-ui/core/MenuItem";
 import TextareaAutosize from "@material-ui/core/TextareaAutosize";
-import { Typography } from "@material-ui/core";
+import { Typography, Tooltip } from "@material-ui/core";
 import { Rating } from "@material-ui/lab";
 import Button from "@material-ui/core/Button";
 import StarBorderIcon from "@material-ui/icons/StarBorder";
@@ -24,10 +24,10 @@ import CardContent from '@material-ui/core/CardContent';
 import CardActions from '@material-ui/core/CardActions';
 import IconButton from '@material-ui/core/IconButton';
 import MicIcon from '@material-ui/icons/Mic';
-// import SettingsVoiceIcon from '@material-ui/icons/SettingsVoice';
+import SettingsVoiceIcon from '@material-ui/icons/SettingsVoice';
 import StopIcon from '@material-ui/icons/Stop';
 import Snackbar from "./Snackbar";
-// import {StreamingClient,SocketStatus} from '@project-sunbird/open-speech-streaming-client';
+import { StreamingClient, SocketStatus } from '@project-sunbird/open-speech-streaming-client';
 
 const languages = [
   {
@@ -73,7 +73,15 @@ class Mainform extends Component {
       dialogMessage: null,
       timeOut: 3000,
       variant: "info",
-    };
+      text: 'Click Start to start speaking..',
+      streaming: new StreamingClient(),
+      showRT: false,
+      start: false,
+      stopRT: false,
+  };
+    // If you want to bind it with the object then add following lines
+    this.handleStart = this.handleStart.bind(this);
+    this.handleStop = this.handleStop.bind(this);
     this.models = []
   }
 
@@ -82,7 +90,11 @@ class Mainform extends Component {
       currentCount: this.state.currentCount - 1
     })
     if(this.state.currentCount < 1) { 
-      this.onStopClick();
+      if(this.state.startRT) {
+        this.handleStop();
+      } else {
+        this.onStopClick();
+      }
       clearInterval(this.intervalId);
     }
   }
@@ -128,6 +140,11 @@ class Mainform extends Component {
       loading: false,
       setModel: this.models.length > 0 ? this.models[0].model_name : '',
     });
+    if(this.state.setModel === 'vakyansh') {
+      this.setState({ showRT: true, startRT: true });
+    } else {
+      this.setState({ showRT: false, startRT: false });
+    }
     this.getModel(event.target.value, "model");
     this.getSentence(event.target.value);
   };
@@ -141,6 +158,11 @@ class Mainform extends Component {
           modelID: item.model_id,
           rating: 0,
         });
+        if(item.model_name === 'vakyansh') {
+          this.setState({ showRT: true, startRT: true });
+        } else {
+          this.setState({ showRT: false, startRT: false });
+        }
       }
     });
   };
@@ -165,6 +187,11 @@ class Mainform extends Component {
             this.setState({ loading: false});
           } else {
             this.setState({ modelID: this.models[0].model_id, setModel: this.models[0].model_name, loading: false});
+            if(this.models[0].model_name === 'vakyansh') {
+              this.setState({ showRT: true, startRT: true });
+            } else {
+              this.setState({ showRT: false, startRT: false });
+            }
           }
         } else {
           this.setState({
@@ -269,7 +296,8 @@ class Mainform extends Component {
       this.state.predictedText,
       this.state.setSentence,
       this.state.wer,
-      this.state.cer
+      this.state.cer,
+      this.state.showRT,
     );
     fetch(apiObj.apiEndPoint(), {
       method: "POST",
@@ -311,10 +339,11 @@ class Mainform extends Component {
       const end= new Date();
       const diffInMs = Math.abs(end - start);
       const fsecs =  diffInMs / 1000;
+      var secs = 0;
       if (this.state.setModel === 'ola-asr') {
-        var secs = result.prediction_time ? result.prediction_time : fsecs;
+        secs = result.prediction_time ? result.prediction_time : fsecs;
       } else {
-        var secs = result.prediction_time ? result.prediction_time.split(':')[2] : fsecs;
+        secs = result.prediction_time ? result.prediction_time.split(':')[2] : fsecs;
       }
       const nsecs =  Math.round(secs * 100) / 100
       this.setState({ predictedTime: nsecs, predictedText: result.transcript, loading: true, show: true });
@@ -335,6 +364,7 @@ class Mainform extends Component {
         audioUri: "",
         predictedText: "",
         predictedTime: "",
+        showRT: false,
       });
     } 
     // else if (this.state.setSentence && this.state.predictedText) {
@@ -353,43 +383,64 @@ class Mainform extends Component {
     // }
   };
 
-  // onRTMicClick = () =>{
-    //Connect to inferencing server
-    // this.streamingClient.connect('https://meity-dev-asr.ulcacontrib.org/', 'en', function (action, id) {
-      // timerRef.current = setTimeout(() => {
-      //     if (streaming.isStreaming) handleStop();
-      //   }, 61000);
-        // setStreamingState("listen");
-        // this.setState({
-        //   recordAudio: RecordState.START,
-        //   audioUri: "",
-        //   predictedText: "",
-        // });
-      // if (action === SocketStatus.CONNECTED) {
-          // Once connection is succesful, start streaming
-          // this.streamingClient.startStreaming(function (transcript) {
-              // transcript will give you the text which can be used further
-    //           console.log('transcript:', transcript);
-    //       }, (e) => {
-    //           console.log("I got error", e);
-    //       })
-    //   } else if (action === SocketStatus.TERMINATED) {
-    //       // Socket is closed and punctuation can be done after it.
-    //   } else {
-    //       //unexpected failures action on connect.
-    //       console.log("Action", action, id);
-    //   }
-    // })
-  // }
-
   onStopClick = () => {
     this.setState({
       micOn: true,
       recordAudio: RecordState.STOP,
       loading: true,
+      showRT: false,
     });
     clearInterval(this.intervalId);
   };
+
+  setText(text) {
+    this.setState({text: text});
+  }
+  setStatus(text) {
+    if(text) {
+      this.setState({ startRT: false, stopRT: true, predictedText: text,  show: true })
+    } else {
+      this.setState({ startRT: false, stopRT: true })
+    }
+  }
+
+  handleStart() {
+    const streaming = this.state.streaming;
+    const language = this.state.lang;
+    this.setText('Connecting to server..');
+    const _this = this;
+    streaming.connect('http://speech-one.eastus.cloudapp.azure.com:9009', language, function (action, id) {
+        console.log("Connected", id, 'action:', action);
+        if (action === SocketStatus.CONNECTED) {
+            console.log('Starting.....');
+            _this.setText('Connected, Start Speaking..');
+            streaming.startStreaming(function (transcript) {
+                console.log("Data", transcript);
+                // _this.setText(transcript);
+                
+                this.intervalId = setInterval(this.timer.bind(this), 1000);
+                _this.setStatus(transcript);
+            }, (e) => {
+                console.log("I got error", e);
+            })
+        } else if (action === SocketStatus.TERMINATED) {
+            // Socket is closed and punctuation can be done here.
+            console.log("Punctuating: ", _this.state.text);
+            _this.setStatus();
+            // _this.handlePunctuation(_this.state.text);
+        } else {
+            console.log("Un expected action", action, id)
+        }
+    })  
+  }
+
+  handleStop() {
+    console.log('Stopping: ' + this.state.text);
+    this.state.streaming.stopStreaming();
+    this.setState({ startRT: true, stopRT: false, showRT: true });
+    this.getWerScrore();
+    clearInterval(this.intervalId);
+  }
 
   snackBarMessage = () => {
     return (
@@ -457,23 +508,38 @@ class Mainform extends Component {
                             style={{ fontFamily: 'Arial', fontSize: '1.5rem', lineHeight: '1.4'}}  value={this.state.setSentence}  disabled  />
                         </Grid>
                         <Grid  style={{ marginTop: "4%", marginBottom: "1%", display: "flex", flexDirection: "column", alignItems: 'center' }} >
-                            <>
-                            <Grid style={this.state.predictedText ? {pointerEvents: "none", opacity: "0.4"} : {}}>
-                                {this.state.micOn && (
-                                  <IconButton aria-label="Record Audio" onClick={this.onMicClick} 
-                                    style={{ background: '#1ea46c', color: '#ffffff'}}> 
-                                    <MicIcon style={{fontSize: '3.5rem'}} />
-                                  </IconButton>
-                                // <img src={startAudio} id="mic_image" onClick={this.onMicClick} alt="MIC"
-                                // style={{ display: "flex",  justifyContent: "center",  marginBottom: "2%",  cursor: 'pointer' }}
-                                // />
-                                )}
-                                {/* {this.state.micOn && this.state.modelID === 1 && (
-                                  <IconButton aria-label="Record Audio" onClick={this.onRTMicClick} 
-                                    style={{ background: '#1ea46c', color: '#ffffff'}}> 
-                                    <SettingsVoiceIcon style={{fontSize: '3.5rem'}} />
-                                  </IconButton>
-                                )} */}
+                            <Grid style={{width: '100%', textAlign: 'center'}}>
+                                <Grid style={this.state.startR ? {pointerEvents: "none", opacity: "0.4", display: 'inline-block', marginRight: '4%'}
+                                 : {display: 'inline-block', marginRight: '4%'}}>
+                                  {this.state.micOn && (
+                                    <Tooltip id="tooltip-fab" title="Record Audio">
+                                    <IconButton aria-label="Record Audio" onClick={this.onMicClick} 
+                                      style={{ background: '#1ea46c', color: '#ffffff', marginRight: '4%'}}> 
+                                      <MicIcon style={{fontSize: '3.5rem'}} />
+                                    </IconButton>
+                                    </Tooltip>
+                                  // <img src={startAudio} id="mic_image" onClick={this.onMicClick} alt="MIC"
+                                  // style={{ display: "flex",  justifyContent: "center",  marginBottom: "2%",  cursor: 'pointer' }}
+                                  // />
+                                  )}
+                                </Grid>
+                                <Grid style={!this.state.showRT ? {pointerEvents: "none", opacity: "0.4", display: 'inline-block', marginRight: '4%'} 
+                                : { display: 'inline-block', marginRight: '4%'}}>
+                                  {this.state.showRT && this.state.startRT &&  (
+                                    <Tooltip id="tooltip-fab" title="Realtime Conversion">
+                                    <IconButton aria-label="Realtime Conversion" onClick={this.handleStart} 
+                                      style={{ background: '#1ea46c', color: '#ffffff'}}> 
+                                      <SettingsVoiceIcon style={{fontSize: '3.5rem'}} />
+                                    </IconButton>
+                                    </Tooltip>
+                                  )}
+                                  {this.state.showRT && this.state.stopRT && (
+                                    <IconButton aria-label="Stop RT Audio" onClick={this.handleStop} 
+                                    style={{ background: '#F44336', color: '#ffffff'}}> 
+                                    <StopIcon style={{fontSize: '3.5rem'}} />
+                                    </IconButton>
+                                  )}
+                                </Grid>
                             </Grid>
                             <Grid style={{ display: "none" }}>
                                 <AudioReactRecorder
@@ -482,10 +548,10 @@ class Mainform extends Component {
                                 style={{ display: "none" }}
                                 />
                             </Grid>
-                            <Grid style={{ marginBottom: "2%" }}>
+                            <Grid style={{ marginBottom: "2%", width: '100%'}}>
                                 {!this.state.micOn && (
                                 <IconButton aria-label="Stop Audio" onClick={this.onStopClick} 
-                                  style={{ background: '#F44336', color: '#ffffff'}}> 
+                                  style={{ background: '#F44336', color: '#ffffff', marginRight: '4%'}}> 
                                   <StopIcon style={{fontSize: '3.5rem'}} />
                                 </IconButton>
                                 // <img src={stopAudio} id="mic_image" onClick={this.onStopClick} alt="STOP"
@@ -499,7 +565,10 @@ class Mainform extends Component {
                               Start speaking. We are recording...
                               </Typography>
                             )}
-                            </>
+                            
+                            {this.state.showRT && (
+                              <p>{this.state.text}</p>
+                            )}
                             {this.state.audioUri ? (
                             <audio  controls  src={this.state.audioUri} style={{ marginBottom: "2%" }}
                             ></audio>

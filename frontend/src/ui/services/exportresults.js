@@ -2,7 +2,7 @@ import API from "./api";
 import ENDPOINTS from "./apiendpoints";
 
 export default class ExportResults extends API {
-  constructor(value, sessionID, modelID, setModel, audioContent, predictedText, inputText, wer, cer, timeout = 200000) {
+  constructor(value, sessionID, modelID, setModel, audioContent, predictedText, inputText, wer, cer, showRT, timeout = 200000) {
     super("POST", timeout, false);
     this.language = value;
     this.sessionId = sessionID;
@@ -16,6 +16,7 @@ export default class ExportResults extends API {
     this.cer = cer;
     this.fetch_model = null;
     this.endpoint = `${super.apiEndPoint()}${ENDPOINTS.export_results}`;
+    this.realtime = showRT;
   }
 
   toString() {
@@ -43,6 +44,7 @@ export default class ExportResults extends API {
         inputText: this.inputText,
         wer: this.wer,
         cer: this.cer,
+        real_time_inf: this.realtime,
     };
   }
 

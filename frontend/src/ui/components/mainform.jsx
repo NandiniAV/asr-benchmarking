@@ -101,6 +101,7 @@ class Mainform extends Component {
   }
 
   clearState = () => {
+    this.setText('');
     this.setState(
       {
         rating: 0,
@@ -261,7 +262,6 @@ class Mainform extends Component {
       });
   };
 
-
   getWerScrore = async () => {
     const obj = new WerCerScore(this.state.predictedText, this.state.setSentence, 'wer');
     const fetchObj = await fetch(obj.apiEndPoint(), {
@@ -419,9 +419,6 @@ class Mainform extends Component {
       this.setState({ startRT: false, stopRT: true, predictedText: text,  show: true })
     } if(val === 'start') {
       this.setState({ startRT: false, stopRT: true })
-    // } else {
-    //   console.log('3')
-    //   this.setState({ startRT: true, stopRT: false })
     }
   }
 
@@ -433,15 +430,16 @@ class Mainform extends Component {
     const _this = this;
     streaming.connect('http://speech-one.eastus.cloudapp.azure.com:9009', language, function (action, id) {
         console.log("Connected", id, 'action:', action);
-        if (action === SocketStatus.CONNECTED) {
+        
+        // this.intervalId = setInterval(_this.timer.bind(this), 1000);
+        if (action === SocketStatus.CONNECTED && !_this.state.stopRT) {
             console.log('Starting.....');
             _this.setStatus('', 'start');
             _this.setText('Connected, Start Speaking..');
             streaming.startStreaming(function (transcript) {
                 console.log("Data", transcript);
                 // _this.setText(transcript);
-                // this.intervalId = setInterval(this.timer.bind(this), 1000);
-                _this.setText('Transcribing..');
+                _this.setText('Transcribing text..');
                 _this.setStatus(transcript);
             }, (e) => {
                 console.log("I got error", e);

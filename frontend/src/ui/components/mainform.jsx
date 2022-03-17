@@ -77,7 +77,6 @@ class Mainform extends Component {
       streaming: new StreamingClient(),
       showRT: false,
       start: false,
-      stopRT: false,
       disableNC: false,
   };
     // If you want to bind it with the object then add following lines
@@ -120,7 +119,6 @@ class Mainform extends Component {
         currentCount: 20,
         showRT: false,
         startRT: false,
-        stopRT: false,
         disableNC: false,
       },
       () => {
@@ -255,6 +253,7 @@ class Mainform extends Component {
       .then(async (res) => {
         const resData = await res.json();
         console.log('resData', resData)
+        this.setState({ loading: false, showRT: false });
         this.clearState();
       })
       .catch((error) => {
@@ -271,13 +270,8 @@ class Mainform extends Component {
     });
     if (fetchObj.ok) {
       const result = await fetchObj.json();
-      if(this.state.showRT && this.state.startRT) {
-        this.setState({ wer: result.wer_score });
-        this.getCerScrore()
-      } else {
-        this.setState({ loading: true, wer: result.wer_score });
-        this.getCerScrore()
-      }
+      this.setState({ loading: false, wer: result.wer_score,});
+      this.getCerScrore()
     }
   }
 
@@ -290,15 +284,9 @@ class Mainform extends Component {
     });
     if (fetchObj.ok) {
       const result = await fetchObj.json();
-      if(this.state.showRT && this.state.startRT) {
-        this.setState({ cer: result.cer_score });
-        this.setState({ dialogMessage: 'Please provide your feedback' })
-        this.submitForm();
-      } else {
-        this.setState({ loading: false, cer: result.cer_score });
-        this.setState({ dialogMessage: 'Please provide your feedback' })
-        this.submitForm();
-      }
+      this.setState({ loading: false, cer: result.cer_score });
+      this.setState({ dialogMessage: 'Please provide your feedback' })
+      this.submitForm();
     }
   }
 
@@ -336,7 +324,15 @@ class Mainform extends Component {
     reader.readAsDataURL(blob.blob);
     reader.onloadend = () => {
       let base64data = reader.result;
-      this.getTranscriptionAPICall(base64data.split("base64,")[1]);
+      if (!this.state.showRT) {
+        this.getTranscriptionAPICall(base64data.split("base64,")[1]);
+      } else {
+        this.setState({ audioContent: base64data.split("base64,")[1] });
+        this.setState({ loading: false, startRT: true });
+        if (this.state.predictedText) {
+          this.getWerScrore()
+        }
+      }
       this.setState({ base: base64data });
     };
   };
@@ -369,6 +365,10 @@ class Mainform extends Component {
   };
 
   onStopRecording = (data) => {
+    if (this.state.showRT) {
+      this.setState({ loading: false, startRT: true });
+      clearInterval(this.intervalId);
+    }
     this.setState({ audioUri: data.url, base: this.blobToBase64(data, this) });
   };
 
@@ -416,9 +416,9 @@ class Mainform extends Component {
 
   setStatus(text, val) {
     if(text) {
-      this.setState({ startRT: false, stopRT: true, predictedText: text,  show: true })
+      this.setState({ startRT: false, predictedText: text, show: true })
     } if(val === 'start') {
-      this.setState({ startRT: false, stopRT: true })
+      this.setState({ startRT: false, recordAudio: RecordState.START })
     }
   }
 
@@ -429,15 +429,13 @@ class Mainform extends Component {
     this.setText('Connecting to server..');
     const _this = this;
     streaming.connect('http://speech-one.eastus.cloudapp.azure.com:9009', language, function (action, id) {
-        console.log("Connected", id, 'action:', action);
         
         // this.intervalId = setInterval(_this.timer.bind(this), 1000);
-        if (action === SocketStatus.CONNECTED && !_this.state.stopRT) {
-            console.log('Starting.....');
+        if (action === SocketStatus.CONNECTED) {
             _this.setStatus('', 'start');
             _this.setText('Connected, Start Speaking..');
+            _this.setState({startRT: false})
             streaming.startStreaming(function (transcript) {
-                console.log("Data", transcript);
                 // _this.setText(transcript);
                 _this.setText('Transcribing text..');
                 _this.setStatus(transcript);
@@ -447,7 +445,8 @@ class Mainform extends Component {
         } else if (action === SocketStatus.TERMINATED) {
             // Socket is closed and punctuation can be done here.
             console.log("Punctuating: ", _this.state.text);
-            // _this.setStatus();
+            _this.setState({startRT: true})
+            _this.setText('');
             // _this.handlePunctuation(_this.state.text);
         } else {
             console.log("Un expected action", action, id)
@@ -456,14 +455,10 @@ class Mainform extends Component {
   }
 
   handleStop() {
+    this.setText('');
     console.log('Stopping: ' + this.state.text);
     this.state.streaming.stopStreaming();
-    this.setState({ startRT: true, stopRT: false, showRT: true });
-    this.setText('');
-    if (this.state.predictedText) {
-      this.getWerScrore()
-    }
-    clearInterval(this.intervalId);
+    this.setState({ recordAudio: RecordState.STOP });
   }
 
   snackBarMessage = () => {
@@ -559,7 +554,7 @@ class Mainform extends Component {
                                   )}
                                   </Grid>
                                   <Grid style={{ display: 'inline-block'}}>
-                                  {this.state.showRT && this.state.stopRT && (
+                                  {this.state.showRT && !this.state.startRT && (
                                     <IconButton aria-label="Stop RT Audio" onClick={this.handleStop} 
                                     style={{ background: '#F44336', color: '#ffffff'}}> 
                                     <StopIcon style={{fontSize: '3.5rem'}} />

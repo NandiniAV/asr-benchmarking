@@ -90,7 +90,7 @@ class Mainform extends Component {
       currentCount: this.state.currentCount - 1
     })
     if(this.state.currentCount < 1) { 
-      if(this.state.startRT) {
+      if(this.state.showRT) {
         this.handleStop();
       } else {
         this.onStopClick();
@@ -422,6 +422,7 @@ class Mainform extends Component {
     }
   }
 
+  // for realtime conversion
   handleStart() {
     this.setState({disableNC: true})
     const streaming = this.state.streaming;
@@ -430,7 +431,7 @@ class Mainform extends Component {
     const _this = this;
     streaming.connect('http://speech-one.eastus.cloudapp.azure.com:9009', language, function (action, id) {
         
-        // this.intervalId = setInterval(_this.timer.bind(this), 1000);
+        _this.intervalId = setInterval(_this.timer.bind(_this), 1000);
         if (action === SocketStatus.CONNECTED) {
             _this.setStatus('', 'start');
             _this.setText('Connected, Start Speaking..');

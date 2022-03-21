@@ -496,7 +496,7 @@ class Mainform extends Component {
                               style={{ width: "96%", fontSize:'1.2em'}}
                               value={this.state.lang}
                               label="Select Language"
-                              onChange={this.handleChange}
+                              onChange={this.handleChange} disabled={this.state.predictedText}
                               >
                               {languages.map((option) => (
                                   <MenuItem key={option.value} value={option.value}>
@@ -512,7 +512,7 @@ class Mainform extends Component {
                                 style={{ width: "96%", fontSize:'1.2em', textTransform: 'capitalize' }}
                                 value={this.state.modelID}
                                 label="Select Model"
-                                onChange={this.handleModelChange}
+                                onChange={this.handleModelChange} disabled={this.state.predictedText}
                                 >
                                 {this.models.map((option) => (
                                     <MenuItem key={option.model_id} value={option.model_id} style={{ textTransform: 'capitalize' }}>
